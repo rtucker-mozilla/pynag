@@ -167,7 +167,7 @@ class config:
 			line = line.strip()
 			if line == "":
 				continue
-			if line[0] == "#":
+			if line[0] == "#" or line[0] == ';':
 				continue
 
 			# append saved text to the current line
@@ -720,7 +720,7 @@ class config:
 				continue
 
 			## Skip comments
-			if line[0] == "#":
+			if line[0] == "#" or line[0] == ';':
 				continue
 
 			## Now get the actual objects and values

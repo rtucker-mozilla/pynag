@@ -18,6 +18,11 @@ __maintainer__ = "Drew Stinnett"
 __email__ = "drew@drewlink.com"
 __status__ = "Development"
 
+
+def palli_debug(text):
+	f = open('/tmp/palli_debug','w')
+	f.write("%s\n" % (text) )
+	f.close()
 class config:
 	"""
 	Parse and write nagios config files
@@ -98,10 +103,15 @@ class config:
 		"""
 		Apply the new item 'template_item' to 'original_item'
 		"""
-
+		if template_item is None:
+			raise "template_item is empty!"
+		if template_item == original_item:
+			return original_item
+		
 		if original_item.has_key('use'):
-			new_item_to_add = self._get_item(original_item['use'], template_item['meta']['object_type'], complete_list)
-			template_item = self._apply_template(template_item, new_item_to_add, complete_list)
+			for parent in original_item['use'].split(','):
+				new_item_to_add = self._get_item(parent, template_item['meta']['object_type'], complete_list)
+				template_item = self._apply_template(template_item, new_item_to_add, complete_list)
 
 		for k,v in template_item.iteritems():
 
@@ -163,7 +173,7 @@ class config:
 			# append saved text to the current line
 			if append:
 				append += ' '
-				line = append . line;
+				line = append + line;
 				append = None
 
 			# end of object definition
@@ -209,7 +219,14 @@ class config:
 
 			## this is an attribute inside an object definition
 			if in_definition:
-				(key, value) = line.split(None, 1)
+				#(key, value) = line.split(None, 1)
+				tmp = line.split(None, 1)
+				if len(tmp) > 1:
+					(key, value) = tmp
+				else:
+					key = tmp[0]
+					value = ""
+				
 
 				## Strip out in-line comments
 				if value.find(";") != -1:
@@ -511,8 +528,11 @@ class config:
 	def _post_parse(self):
 		for raw_item in self.pre_object_list:
 			if raw_item.has_key('use'):
-				item_to_add = self._get_item(raw_item['use'], raw_item['meta']['object_type'], self.pre_object_list)
-				raw_item = self._apply_template(raw_item,item_to_add, self.pre_object_list)
+				for parent in raw_item['use'].split(','):
+					item_to_add = self._get_item(parent, raw_item['meta']['object_type'], self.pre_object_list)
+					if item_to_add is None or raw_item is None:
+						raise "Item not found"
+					raw_item = self._apply_template(raw_item,item_to_add, self.pre_object_list)
 			self.post_object_list.append(raw_item)
 
 		## Add the items to the class lists.  
@@ -712,12 +732,26 @@ class config:
 
 			## Parse all files in a cfg directory
 			if config_object == "cfg_dir":
-				raw_file_list = os.listdir(config_value)
+				directories = []
+				raw_file_list = []
+				directories.append(config_value)
+				while len(directories) > 0:
+					current_directory = directories.pop(0)
+					list = os.listdir(current_directory)
+					for item in list:
+						item = "%s" % (os.path.join(current_directory, item.strip()))
+						if os.path.isdir(item):
+							directories.append( item )
+							continue
+						elif os.path.islink( item ):
+							item = os.readlink( item )
+						if raw_file_list.count( item ) < 1:
+							raw_file_list.append( item )
 				for raw_file in raw_file_list:
 					if raw_file[-4:] == ".cfg":
-						filename = "%s" % (os.path.join(config_value, raw_file.strip()))
-						if os.path.exists(filename):
-							self.cfg_files.append(filename)
+						#filename = "%s" % (os.path.join(config_value, raw_file.strip()))
+						if os.path.exists(raw_file):
+							self.cfg_files.append(raw_file)
 
 		## This loads everything into
 		for cfg_file in self.cfg_files:

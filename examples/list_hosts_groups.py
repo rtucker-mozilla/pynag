@@ -19,5 +19,5 @@ nc.parse()
 for service in nc.get_service_membership(target_host):
 	## Check to see if this is the only host in this service
 	#return_item = nc.get_service(target_host, service_description)
-	print service['name']
+	print service['service_description']
 #	print return_item['service_description']

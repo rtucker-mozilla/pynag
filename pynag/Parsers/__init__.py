@@ -108,8 +108,8 @@ class config:
 		if template_item == original_item:
 			return original_item
 		
-		if original_item.has_key('use'):
-			for parent in original_item['use'].split(','):
+		if template_item.has_key('use'):
+			for parent in template_item['use'].split(','):
 				new_item_to_add = self._get_item(parent, template_item['meta']['object_type'], complete_list)
 				template_item = self._apply_template(template_item, new_item_to_add, complete_list)
 
@@ -128,7 +128,10 @@ class config:
 			## Ignore 'meta' values
 			if k == 'meta':
 				continue
-
+			if k == '__USERNAME' and original_item.has_key('host_name') and original_item['host_name'] == 'pall.sigurdsson.is':
+				raise str(original_item)
+			if k == 'name':
+				continue
 			## Apply any unknown value
 			if not original_item.has_key(k):
 				original_item[k] = v
@@ -264,6 +267,24 @@ class config:
 		object_key = self._get_key(object_type,user_key)
 
 		original_object = self.get_object(object_type, object_name, user_key = None)
+		self['all_%s' % object_type].remove(original_object)
+		original_object[field] = new_value
+		original_object['meta']['needs_commit'] = True
+		self['all_%s' % object_type].append(original_object)
+		self.commit()
+		return True
+	def edit_object2(self, item, field, new_value):
+		"""
+		Edit an object's attributes
+
+		Example:
+		To change the alias of 'server01' to "Primary Server", use the following method
+
+		edit_object('host','server01', 'alias','Primary Server')
+		"""
+		original_object = item
+		object_type = original_object['meta']['object_type']
+		#original_object = self.get_object(object_type, object_name, user_key = None)
 		self['all_%s' % object_type].remove(original_object)
 		original_object[field] = new_value
 		original_object['meta']['needs_commit'] = True
@@ -494,6 +515,8 @@ class config:
 			## Skip items that don't even have this key
 			if not item.has_key(search_key):
 				continue
+			if not item.has_key(key):
+				continue
 
 			if name == item[key]:
 				if item[search_key].find(",") != -1:
@@ -515,7 +538,6 @@ class config:
 			if possible_item.has_key('name'):
 				## Start appending to the item
 				for k,v in possible_item.iteritems():
-
 					try:
 						if k == 'use':
 							source_item = self._append_use(source_item, v)
@@ -530,6 +552,7 @@ class config:
 
 	def _post_parse(self):
 		for raw_item in self.pre_object_list:
+			item_to_add = None
 			if raw_item.has_key('use'):
 				for parent in raw_item['use'].split(','):
 					item_to_add = self._get_item(parent, raw_item['meta']['object_type'], self.pre_object_list)
@@ -692,13 +715,13 @@ class config:
 		"""
 		import time
 		output = ""
-		output += "# Configuration file %s\n" % item['meta']['filename']
-		output += "# Edited by PyNag on %s\n" % time.ctime()
-		if len(item['meta']['template_fields']) != 0:
-			output += "# Values from templates:\n"
-		for k in item['meta']['template_fields']:
-			output += "#\t %-30s %-30s\n" % (k, item[k])
-		output += "\n"
+		#output += "# Configuration file %s\n" % item['meta']['filename']
+		#output += "# Edited by PyNag on %s\n" % time.ctime()
+		#if len(item['meta']['template_fields']) != 0:
+		#	output += "# Values from templates:\n"
+		#for k in item['meta']['template_fields']:
+		#	output += "#\t %-30s %-30s\n" % (k, item[k])
+		#output += "\n"
 		output += "define %s {\n" % item['meta']['object_type']
 		for k, v in item.iteritems():
 			if k != 'meta':
@@ -743,11 +766,11 @@ class config:
 					list = os.listdir(current_directory)
 					for item in list:
 						item = "%s" % (os.path.join(current_directory, item.strip()))
+						if os.path.islink( item ):
+							item = os.readlink( item )
 						if os.path.isdir(item):
 							directories.append( item )
 							continue
-						elif os.path.islink( item ):
-							item = os.readlink( item )
 						if raw_file_list.count( item ) < 1:
 							raw_file_list.append( item )
 				for raw_file in raw_file_list:

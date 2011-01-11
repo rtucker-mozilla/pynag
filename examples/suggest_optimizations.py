@@ -23,3 +23,15 @@ for host in nc['all_host']:
 	if host.has_key('address'):
 		if not is_ip(host['address']):
 			print "%s has a name instead of ip in the address field (%s)" % (host['alias'], host['address'])
+
+
+for host in nc['all_host']:
+	if not host.has_key('host_name') :
+		print "This host has no hostname:", host['name']
+
+for service in nc['all_service']:
+	if not service.has_key('service_description'):
+		print "This service has no service_description:", service['name']
+	if not service.has_key('host_name'):
+		print "This service has no host_name:", service['name']
+
